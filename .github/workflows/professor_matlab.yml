@@ -29,15 +29,21 @@ jobs:
       - name: Setup MATLAB
         uses: matlab-actions/setup-matlab@v3
 
+      - name: Make valid MATLAB filenames (copy bytes, do not edit professor code)
+        shell: bash
+        run: |
+          cp "professor_matlab/original/Grab Weather Data Next 2 Days.m" "professor_matlab/original/professor_next2.m"
+          cp "professor_matlab/original/Grab Weather Data Last 30 Days.m" "professor_matlab/original/professor_past30.m"
+
       - name: Execute unchanged professor MATLAB code
         uses: matlab-actions/run-command@v3
         with:
           command: |
             cd('professor_matlab/original');
             if strcmp('${{ inputs.script }}', 'Next 2 Days')
-                run('Grab Weather Data Next 2 Days.m');
+                run('professor_next2.m');
             else
-                run('Grab Weather Data Last 30 Days.m');
+                run('professor_past30.m');
             end
 
       - name: Commit CSV to repository
