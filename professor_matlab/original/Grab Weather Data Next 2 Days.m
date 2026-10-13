@@ -73,3 +73,4 @@ function F = collect_forecast(city, latitude, longitude, saveDir)
     title("Hourly precipitation against day");
     ylabel("% Likelihood of rain");
 end
+
