@@ -1,0 +1,60 @@
+name: CHEG807 2PM Daily CSV Test
+
+on:
+  schedule:
+    - cron: "0 14 * * *"
+      timezone: "America/New_York"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cheg807-2pm-test-snapshots
+  cancel-in-progress: false
+
+jobs:
+  test-and-save:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CITY_NAME: "Seattle, WA"
+      LATITUDE: "47.6062"
+      LONGITUDE: "-122.3321"
+      CITY_TIMEZONE: "America/Los_Angeles"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch forecast as a test
+        run: python fetch_forecast.py --mode test
+
+      - name: Save one test CSV per day in the repository
+        run: |
+          mkdir -p data/test_snapshots
+          DAY="$(TZ=America/New_York date +%Y-%m-%d)"
+          OUTPUT="data/test_snapshots/$DAY.csv"
+          if [ -f "$OUTPUT" ]; then
+            echo "$OUTPUT already exists; keeping the first snapshot for this date."
+          else
+            cp test-output/forecast_test.csv "$OUTPUT"
+            echo "Saved new snapshot: $OUTPUT"
+          fi
+
+      - name: Commit CSV to GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/test_snapshots/
+          if git diff --cached --quiet; then
+            echo "No new CSV to commit today."
+          else
+            git commit -m "Save daily 2PM test forecast [skip ci]"
+            git push
+          fi
