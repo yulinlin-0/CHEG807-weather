@@ -1,0 +1,77 @@
+name: CHEG807 Professor Original MATLAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: "Which professor MATLAB script?"
+        type: choice
+        required: true
+        options:
+          - "Next 2 Days"
+          - "Last 30 Days"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: professor-matlab-test
+  cancel-in-progress: false
+
+jobs:
+  professor-original:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      MLM_LICENSE_TOKEN: ${{ secrets.MLM_LICENSE_TOKEN }}
+    steps:
+      - name: Check licensing
+        run: |
+          if [ -z "$MLM_LICENSE_TOKEN" ]; then
+            echo "::error::Private repository requires a MATLAB Batch Licensing Token in GitHub secret MLM_LICENSE_TOKEN"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MATLAB
+        uses: matlab-actions/setup-matlab@v3
+
+      - name: Execute unchanged professor MATLAB code
+        uses: matlab-actions/run-command@v3
+        with:
+          command: |
+            cd('professor_matlab/original');
+            if strcmp('${{ inputs.script }}', 'Next 2 Days')
+                run('Grab Weather Data Next 2 Days.m');
+            else
+                run('Grab Weather Data Last 30 Days.m');
+            end
+
+      - name: Commit CSV to repository
+        env:
+          SCRIPT_CHOICE: ${{ inputs.script }}
+        run: |
+          mkdir -p data/professor_matlab
+          if [ "$SCRIPT_CHOICE" = "Next 2 Days" ]; then
+            SOURCE="professor_matlab/original/20261012_newark_next2.csv"
+            KIND="next2"
+          else
+            SOURCE="professor_matlab/original/20261012_newark_past30.csv"
+            KIND="past30"
+          fi
+          test -s "$SOURCE"
+          DATESTAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          cp "$SOURCE" "data/professor_matlab/$DATESTAMP-$KIND.csv"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/professor_matlab/
+          git commit -m "Store professor MATLAB output [skip ci]"
+          git push
+
+      - name: Backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: professor-matlab-output
+          path: data/professor_matlab/*.csv
