@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir -p data/test_snapshots
           DAY="$(TZ=America/New_York date +%Y-%m-%d)"
-          OUTPUT="data/test_snapshots/$DAY.csv"
+          OUTPUT="data/test_snapshots/$DAY-$GITHUB_EVENT_NAME.csv"
           if [ -f "$OUTPUT" ]; then
             echo "$OUTPUT already exists; keeping the first snapshot for this date."
           else
