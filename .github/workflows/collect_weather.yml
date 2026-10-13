@@ -1,0 +1,70 @@
+name: CHEG807 Weather Forecast Collection
+
+on:
+  schedule:
+    # US Eastern time, including daylight-saving changes.
+    - cron: "40 7 * * *"
+      timezone: "America/New_York"
+    # Backup opportunity if the earlier scheduled run failed.
+    - cron: "10 8 * * *"
+      timezone: "America/New_York"
+  workflow_dispatch: # Manual runs only produce a downloadable TEST artifact.
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cheg807-weather-collection
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # TEST CITY ONLY: replace after the instructor approves the city.
+      CITY_NAME: "Seattle, WA"
+      LATITUDE: "47.6062"
+      LONGITUDE: "-122.3321"
+      CITY_TIMEZONE: "America/Los_Angeles"
+      COLLECT_ENABLED: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download hourly forecast
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            python fetch_forecast.py --mode test
+          elif [ "$COLLECT_ENABLED" = "true" ]; then
+            python fetch_forecast.py --mode scheduled
+          else
+            echo "Daily collection is disabled until the instructor approves a city."
+          fi
+
+      - name: Upload manual test CSV
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-test
+          path: test-output/forecast_test.csv
+          if-no-files-found: error
+
+      - name: Commit daily official CSV snapshots
+        if: github.event_name == 'schedule' && env.COLLECT_ENABLED == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No new forecast snapshot."
+          else
+            git commit -m "Collect daily weather forecast [skip ci]"
+            git push
+          fi
