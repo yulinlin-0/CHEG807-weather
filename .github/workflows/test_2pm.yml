@@ -1,9 +1,6 @@
 name: CHEG807 2PM Daily CSV Test
 
 on:
-  schedule:
-    - cron: "0 14 * * *"
-      timezone: "America/New_York"
   workflow_dispatch:
 
 permissions:
