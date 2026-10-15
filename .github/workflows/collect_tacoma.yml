@@ -1,0 +1,63 @@
+name: CHEG807 Tacoma Forecast Collection
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "test = preview only; collect = official CSV and PNG (7:30–8:30 AM Eastern only)"
+        type: choice
+        required: true
+        default: test
+        options:
+          - test
+          - collect
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cheg807-tacoma-forecast
+  cancel-in-progress: false
+
+jobs:
+  collect-tacoma:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install plotting support
+        run: python -m pip install -r requirements-tacoma.txt
+
+      - name: Acquire Tacoma forecasts and make hourly precipitation-probability plot
+        env:
+          MODE: ${{ inputs.mode }}
+        run: python collect_tacoma.py --mode "$MODE"
+
+      - name: Upload preview CSV and PNG
+        if: inputs.mode == 'test'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tacoma-preview
+          path: test-output/tacoma/
+          if-no-files-found: error
+
+      - name: Commit official CSV and PNG to GitHub
+        if: inputs.mode == 'collect'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tacoma/
+          if git diff --cached --quiet; then
+            echo "No new Tacoma forecast (already collected or not saved)."
+          else
+            git commit -m "Collect Tacoma forecasts and plot [skip ci]"
+            git push
+          fi
