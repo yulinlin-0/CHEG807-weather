@@ -1,6 +1,6 @@
 # CHEG 807 Project A — Tacoma Weather Collection
 
-**Project:** Collect fixed-time, hourly rainfall-probability forecasts for Tacoma, Washington, then evaluate probability calibration and information content after sufficient days. Forecast collection is working: the repository already contains a Tacoma snapshot and PNG chart from **2026-10-15 at 07:30:27 America/New_York** (04:30:27 Tacoma local time).
+**Project:** Collect fixed-time, hourly rainfall-probability forecasts for Tacoma, Washington, then evaluate probability calibration and information content after sufficient days. The first saved Tacoma snapshot was collected on **2026-10-15 at 07:30:27 America/New_York** (04:30:27 Tacoma local time); this was **outside the instructor's subsequently clarified fixed-EST sampling window** and should be excluded from graded analysis unless approved.
 
 This is a **weather-data acquisition project**, not a Python weather prediction model. The numerical forecasts come from the **Open-Meteo Forecast API**; the Python programs request, timestamp, save and plot that data. No MATLAB installation or personal computer running overnight is required.
 
@@ -17,9 +17,9 @@ This is a **weather-data acquisition project**, not a Python weather prediction 
 | Repository branch | main |
 | Workflow | [CHEG807 Tacoma Forecast and Historical Weather](.github/workflows/collect_tacoma.yml) |
 
-**Time-zone clarification:** 07:30 Delaware time is 04:30 in Tacoma. This is the schedule currently configured and verified, *not* 07:30 Tacoma local time. If the instructor intends city-local 07:30–08:30, update **both** the cron-job.org schedule and the Python collection-window guard in \`collect_tacoma.py\`. Tacoma selection and collection-time interpretation should be confirmed with the instructor before treating the data as graded observations.
+**Instructor's updated schedule:** always sample between **07:30 and 08:30 EST (fixed UTC−05:00)**. Through October 31 that is **08:30–09:30 Delaware local (EDT)**; from November 1 it is **07:30–08:30 Delaware local (EST)**. Choosing 08:00 fixed EST gives 09:00 Delaware until Oct 31 and 08:00 Delaware from Nov 1. If cron-job.org supports fixed UTC−05:00 / `Etc/GMT+5`, choose it to avoid manual switching; otherwise change the `America/New_York` schedule on Nov 1. The Python program **does not enforce a clock-time window**: cron-job.org determines execution time, and each saved row includes the actual timestamp, which must be audited for compliance.
 
-GitHub Actions **does not use its own cron schedule** for this project. An external request triggers the workflow; a late Actions run will be rejected by the Python time-window check rather than falsely counted as an on-time forecast.
+GitHub Actions **does not use its own cron schedule** for this project. An external request triggers the workflow. Scheduled requests can start late; check the CSV capture timestamp for the required EST window.
 
 ## 2. Programs — both original MATLAB functions are reproduced
 
@@ -38,7 +38,7 @@ The unchanged instructor-provided \`.m\` scripts remain under [professor_matlab/
 
 ## 3. Automatic forecast collection
 
-At 07:30 Eastern, cron-job.org makes a POST request to:
+At the scheduled sampling time (recommended 08:00 fixed EST), cron-job.org makes a POST request to:
 
 \`\`\`text
 https://api.github.com/repos/yulinlin-0/CHEG807-weather/actions/workflows/collect_tacoma.yml/dispatches
@@ -46,7 +46,7 @@ https://api.github.com/repos/yulinlin-0/CHEG807-weather/actions/workflows/collec
 
 Use:
 
-- **Timezone / recurrence:** \`America/New_York\`, every day at \`07:30\`
+- **Timezone / recurrence:** fixed UTC−05:00 (EST), every day at `08:00` (or `America/New_York` at `09:00` through Oct 31, then `08:00` from Nov 1)
 - **Request method:** \`POST\`
 - **Request body:**
   \`\`\`json
@@ -65,7 +65,7 @@ The historical 30-day script is **not run daily**; it can be triggered separatel
 \`\`\`text
 data/tacoma/
 ├── snapshots/
-│   ├── 2026-10-15.csv                 # complete rolling 48-hour capture
+│   ├── 2026-10-15.csv                 # pre-clarification capture: exclude unless approved
 │   └── YYYY-MM-DD.csv                 # one new file for each successful day
 ├── plots/
 │   ├── 2026-10-15.png                 # forecast probability vs local forecast time
@@ -108,7 +108,7 @@ Open [GitHub Actions → CHEG807 Tacoma Forecast and Historical Weather](https:/
 | --- | --- | --- |
 | \`test\` | \`forecast\` | CSVs + PNG in downloadable \`tacoma-forecast-preview\` **Artifact**; nothing written into official data |
 | \`test\` | \`history\` | Past-weather CSVs + PNG in \`tacoma-history-preview\` **Artifact**; no official changes |
-| \`collect\` | \`forecast\` | Official CSVs + PNG committed under \`data/tacoma/\`; **7:30–8:30 Eastern only** |
+| \`collect\` | \`forecast\` | Official CSVs + PNG committed under \`data/tacoma/\`; at any execution time; check the capture timestamp for assignment compliance |
 | \`collect\` | \`history\` | Historical CSVs + PNG committed under \`data/tacoma/history/\`; can run outside the daily collection window |
 
 Artifacts are found on an individual successful workflow-run page under **Artifacts**. Daily official CSV/PNG are found in the repository itself, **not** in Artifacts.
