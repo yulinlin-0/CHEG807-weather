@@ -23,7 +23,7 @@ CITY_NAME = "Tacoma, WA"
 LATITUDE = 47.2529
 LONGITUDE = -122.4443
 CITY_TIMEZONE = "America/Los_Angeles"
-COLLECTION_TIMEZONE = "America/New_York"  # Current cron-job.org 07:30 schedule
+COLLECTION_TIMEZONE = "America/New_York"  # For Delaware timestamps/date only; execution time is controlled externally
 CITY_TZ = ZoneInfo(CITY_TIMEZONE)
 COLLECT_TZ = ZoneInfo(COLLECTION_TIMEZONE)
 FORECAST_FIELDS = (
@@ -203,10 +203,6 @@ def rebuild_outputs() -> None:
     print("Third-calendar-day tail hours (preserved):", len(batches["day3"]))
 
 
-def valid_window(instant: datetime) -> bool:
-    t = instant.astimezone(COLLECT_TZ)
-    return 7 * 60 + 30 <= t.hour * 60 + t.minute < 8 * 60 + 30
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -220,8 +216,6 @@ def main() -> None:
     print(f"Capture (Delaware): {captured.astimezone(COLLECT_TZ).isoformat(timespec='seconds')}")
     print(f"Capture (Tacoma): {captured.astimezone(CITY_TZ).isoformat(timespec='seconds')}")
     if args.mode == "collect":
-        if not valid_window(captured):
-            raise RuntimeError("Capture outside 07:30–08:30 America/New_York; no official file saved")
         if target.exists():
             print(f"Official snapshot exists: {target}. Will not overwrite today's forecast.")
             return
@@ -237,8 +231,6 @@ def main() -> None:
         print("TEST ONLY — CSV and PNG saved as workflow artifact; not official data")
         return
 
-    if not valid_window(datetime.now(timezone.utc)):
-        raise RuntimeError("Forecast fetch finished outside 07:30–08:30 Delaware window")
     # Render figure first, so plotting errors do not create a partial snapshot.
     plot_forecast(rows, PLOTS / f"{date_name}.png")
     write_csv(target, rows)
